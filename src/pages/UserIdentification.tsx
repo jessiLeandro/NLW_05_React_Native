@@ -8,9 +8,11 @@ import {
   View,
   KeyboardAvoidingView,
   Platform,
-  Keyboard
+  Keyboard,
+  Alert
 } from 'react-native'
 import { TouchableWithoutFeedback } from 'react-native-gesture-handler'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import { Button } from '../components/Button'
 
@@ -77,8 +79,22 @@ export function UserIdentification() {
   const [isFocused, setIsFocused] = useState(false)
   const [name, setName] = useState<string>()
 
-  function handleSubmit() {
-    navigation.navigate('Confirmation')
+  async function handleSubmit() {
+    if (!name) return Alert.alert('Informe seu nome')
+
+    try {
+      await AsyncStorage.setItem('@plantmanager:user', name)
+
+      navigation.navigate('Confirmation', {
+        title: 'Prontinho!',
+        subtitle:
+          'Agora vamos começar a cuidar das suas plantinhas com muito cuidado.',
+        buttonTitle: 'Começar',
+        nextScreen: 'PlantSelect'
+      })
+    } catch (err) {
+      Alert.alert('Não foi possível salvar seu nome!')
+    }
   }
 
   function handleInputBlur() {

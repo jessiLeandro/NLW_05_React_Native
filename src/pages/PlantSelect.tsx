@@ -10,6 +10,8 @@ import { Load } from '../components/Load'
 
 import colors from '../styles/colors'
 import fonts from '../styles/fonts'
+import { useNavigation } from '@react-navigation/core'
+import { PlantProps } from '../libs/storage'
 
 const styles = StyleSheet.create({
   container: {
@@ -60,19 +62,6 @@ interface EnvironmentProps {
   title: string
 }
 
-interface PlantProps {
-  id: string
-  name: string
-  about: string
-  water_tips: string
-  photo: string
-  environments: [string]
-  frequency: {
-    times: number
-    repeat_every: string
-  }
-}
-
 export function PlantSelect() {
   const [environments, setEnvironments] = useState<EnvironmentProps[]>([])
   const [plats, setPlats] = useState<PlantProps[]>([])
@@ -81,7 +70,8 @@ export function PlantSelect() {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [loadedAll, setLoadedAll] = useState(false)
+
+  const navigation = useNavigation()
 
   useEffect(() => {
     async function fetchEnvironment() {
@@ -101,39 +91,40 @@ export function PlantSelect() {
     fetchEnvironment()
   }, [])
 
-  useEffect(() => {
-    async function fetchPlants() {
-      const { data } = await api.get('plants', {
-        params: {
-          _sort: 'name',
-          _order: 'asc',
-          _page: page,
-          _limit: 8
-        }
-      })
-
-      if (!data) return setLoading(true)
-
-      if (page > 1) {
-        setPlats((oldValue) => [...oldValue, ...data])
-        setFilteredPlats((oldValue) => [...oldValue, ...data])
-      } else {
-        setPlats(data)
-        setFilteredPlats(data)
+  async function fetchPlants() {
+    const { data } = await api.get('plants', {
+      params: {
+        _sort: 'name',
+        _order: 'asc',
+        _page: page,
+        _limit: 8
       }
+    })
 
-      setLoading(false)
-      setLoadingMore(false)
+    if (!data) return setLoading(true)
+
+    if (page > 1) {
+      setPlats((oldValue) => [...oldValue, ...data])
+      setFilteredPlats((oldValue) => [...oldValue, ...data])
+    } else {
+      setPlats(data)
+      setFilteredPlats(data)
     }
 
+    setLoading(false)
+    setLoadingMore(false)
+  }
+
+  useEffect(() => {
     fetchPlants()
-  }, [page])
+  }, [])
 
   function handleFatchMore(distance: number) {
     if (distance < 1) return
 
     setLoadingMore(true)
     setPage((oldValue) => oldValue + 1)
+    fetchPlants()
   }
 
   function handleEnvironmentSelected(environment: string) {
@@ -148,6 +139,10 @@ export function PlantSelect() {
     setFilteredPlats(filtered)
   }
 
+  function handlePlanSelec(plant: PlantProps) {
+    navigation.navigate('PlantSave', { plant })
+  }
+
   if (loading) return <Load />
 
   return (
@@ -160,6 +155,7 @@ export function PlantSelect() {
 
       <View>
         <FlatList
+          keyExtractor={(item) => String(item.key)}
           horizontal
           showsHorizontalScrollIndicator={false}
           data={environments}
@@ -176,8 +172,14 @@ export function PlantSelect() {
 
       <View style={styles.plants}>
         <FlatList
+          keyExtractor={(item) => String(item.id)}
           data={filteredPlats}
-          renderItem={({ item }) => <PlantCardPrimary data={item} />}
+          renderItem={({ item }) => (
+            <PlantCardPrimary
+              data={item}
+              onPress={() => handlePlanSelec(item)}
+            />
+          )}
           showsVerticalScrollIndicator={false}
           numColumns={2}
           contentContainerStyle={styles.contentContainerStyle}
